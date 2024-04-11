@@ -1,5 +1,4 @@
 import logging
-
 from apibara.indexer import IndexerRunner, IndexerRunnerConfiguration, Info
 from apibara.indexer.indexer import IndexerConfiguration
 from apibara.protocol.proto.stream_pb2 import Cursor, DataFinality
@@ -13,27 +12,38 @@ root_logger = logging.getLogger("apibara")
 root_logger.setLevel(logging.INFO)
 root_logger.addHandler(logging.StreamHandler())
 
-briqs_address = felt.from_hex(
-    "0x01435498bf393da86b4733b9264a86b58a42b31f8d8b8ba309593e5c17847672"
+factory_address = felt.from_hex(
+    "0x0603c4273d547ecfccc3c89bcfce9a11b454e0acb9a1c22166846cfda1ad7756"
 )
 
 # `Transfer` selector.
 # You can get this value either with starknet.py's `ContractFunction.get_selector`
 # or from starkscan.
-transfer_key = felt.from_hex(
-    "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
+owner_transfer_key = felt.from_hex(
+    "0x1390fd803c110ac71730ece1decfc34eb1d0088e295d4f1b125dda1e0c5b9ff"
 )
 
+# `Organization Created Event` selector.
 
-class BriqIndexer(StarkNetIndexer):
+organization_created_key = felt.from_hex(
+    "0x2dd16a4a85d0a267447285a74e86fb100b38f5ab580327b76ca744af64b49cc"
+)
+
+# # `Creation Fee Event` selector.
+
+creation_fee_updated_key = felt.from_hex(
+    "0x3f5dbcd9a0c9c0b4243b796e189e36eec0a4668b352af084dbad3843e86cbd8"
+)
+
+class CPIndexer(StarkNetIndexer):
     def indexer_id(self) -> str:
-        return "starknet-example"
+        return "cp-indexer"
 
     def initial_configuration(self) -> Filter:
-        # Return initial configuration of the indexer.
+        # Include all event keys that this indexer should handle.
         return IndexerConfiguration(
             filter=Filter().add_event(
-                EventFilter().with_from_address(briqs_address).with_keys([transfer_key])
+                EventFilter().with_from_address(factory_address)
             ),
             starting_cursor=starknet_cursor(10_000),
             finality=DataFinality.DATA_STATUS_ACCEPTED,
@@ -42,21 +52,43 @@ class BriqIndexer(StarkNetIndexer):
     async def handle_data(self, info: Info, data: Block):
         # Handle one block of data
         for event_with_tx in data.events:
-            tx_hash = felt.to_hex(event_with_tx.transaction.meta.hash)
             event = event_with_tx.event
-
-            from_addr = felt.to_hex(event.data[0])
-            to_addr = felt.to_hex(event.data[1])
-            token_id = felt.to_int(event.data[2]) + (felt.to_int(event.data[3]) << 128)
-            print("Transfer")
+            tx_hash = felt.to_hex(event_with_tx.transaction.meta.hash)
+            print("Event")
             print(f"   Tx Hash: {tx_hash}")
-            print(f"      From: {from_addr}")
-            print(f"        To: {to_addr}")
-            print(f"  Token ID: {token_id}")
-            print()
+           
+            # Handle based on event key
+            if event.keys[0] == owner_transfer_key:
+                self._handle_owner_transfer_event(event, tx_hash)
+            elif event.keys[0] == organization_created_key:
+                self._handle_organization_created_event(event, tx_hash)
+            elif event.keys[0] == creation_fee_updated_key:
+                self._handle_creation_fee_updated_event(event, tx_hash)
+            else:
+                print(f"Unhandled event key: {event.key}")
+        
+
+    def _handle_owner_transfer_event(self, event, tx_hash):
+        print("Owner Transfer Event")
+        print(f"   Tx Hash: {tx_hash}")
+        # Add additional logic to process the event
+        print()
+
+    def _handle_organization_created_event(self, event, tx_hash):
+        print("Organization Created Event")
+        print(f"   Tx Hash: {tx_hash}")
+        # Add additional logic to process the event
+        print()
+
+    def _handle_creation_fee_updated_event(self, event, tx_hash):
+        print("Creation Fee Updated Event")
+        print(f"   Tx Hash: {tx_hash}")
+        # Add additional logic to process the event
+        print()
 
     async def handle_invalidate(self, _info: Info, _cursor: Cursor):
         raise ValueError("data must be finalized")
+
 
 
 async def run_indexer(server_url=None, mongo_url=None, restart=None, dna_token=None):
@@ -69,5 +101,6 @@ async def run_indexer(server_url=None, mongo_url=None, restart=None, dna_token=N
         reset_state=restart,
     )
 
+
     # ctx can be accessed by the callbacks in `info`.
-    await runner.run(BriqIndexer(), ctx={"network": "starknet-mainnet"})
+    await runner.run(CPIndexer(), ctx={"network": "starknet-sepolia"})

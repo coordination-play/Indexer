@@ -1,4 +1,4 @@
-# Web3 Indexer with Apibara
+# Co-ordination play Web3 Indexer with Apibara
 
 This repository uses [Apibara](https://github.com/apibara/apibara) to index
 web3 data.
