@@ -15,4 +15,4 @@
 - `apibara run starknet_to_mongo.js`
 
 ##### Browser
-- http://localhost:8081/db/example/transfers
+- http://localhost:8081/db/cp/orgs
