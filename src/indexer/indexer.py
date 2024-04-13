@@ -112,8 +112,10 @@ async def run_indexer(server_url=None, mongo_url=None, restart=None, dna_token=N
             stream_url=server_url,
             storage_url=mongo_url,
             token=dna_token,
+
         ),
         reset_state=restart,
+        
     )
 
 
