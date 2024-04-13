@@ -6,7 +6,7 @@ from apibara.starknet import EventFilter, Filter, StarkNetIndexer, felt
 from apibara.starknet.cursor import starknet_cursor
 from apibara.starknet.proto.starknet_pb2 import Block
 
-# Print apibara logs
+
 root_logger = logging.getLogger("apibara")
 # change to `logging.DEBUG` to print more information
 root_logger.setLevel(logging.INFO)
@@ -35,12 +35,20 @@ creation_fee_updated_key = felt.from_hex(
     "0x3f5dbcd9a0c9c0b4243b796e189e36eec0a4668b352af084dbad3843e86cbd8"
 )
 
+def hex_to_readable_string(hex_string):
+    hex_string = hex_string[2:] if hex_string.startswith("0x") else hex_string
+    
+    byte_string = bytes.fromhex(hex_string)
+    
+    decoded_string = byte_string.decode('utf-8')
+    
+    return decoded_string.lstrip('\x00')
+
 class CPIndexer(StarkNetIndexer):
     def indexer_id(self) -> str:
         return "cp-indexer"
 
     def initial_configuration(self) -> Filter:
-        # Include all event keys that this indexer should handle.
         return IndexerConfiguration(
             filter=Filter().add_event(
                 EventFilter().with_from_address(factory_address)
@@ -50,14 +58,12 @@ class CPIndexer(StarkNetIndexer):
         )
 
     async def handle_data(self, info: Info, data: Block):
-        # Handle one block of data
         for event_with_tx in data.events:
             event = event_with_tx.event
             tx_hash = felt.to_hex(event_with_tx.transaction.meta.hash)
             print("Event")
             print(f"   Tx Hash: {tx_hash}")
            
-            # Handle based on event key
             if event.keys[0] == owner_transfer_key:
                 self._handle_owner_transfer_event(event, tx_hash)
             elif event.keys[0] == organization_created_key:
@@ -71,19 +77,28 @@ class CPIndexer(StarkNetIndexer):
     def _handle_owner_transfer_event(self, event, tx_hash):
         print("Owner Transfer Event")
         print(f"   Tx Hash: {tx_hash}")
-        # Add additional logic to process the event
         print()
 
     def _handle_organization_created_event(self, event, tx_hash):
         print("Organization Created Event")
         print(f"   Tx Hash: {tx_hash}")
-        # Add additional logic to process the event
+        name = hex_to_readable_string(felt.to_hex(event.data[0]))
+        organization = felt.to_hex(event.data[1])
+        metadata = felt.to_hex(event.data[2])
+        id = felt.to_hex(event.data[3])
+        print(f"   Name: {name}")
+        print(f"   Organization: {organization}")
+        print(f"   Metadata: {metadata}")
+        print(f"   ID: {id}")
         print()
+
+
 
     def _handle_creation_fee_updated_event(self, event, tx_hash):
         print("Creation Fee Updated Event")
         print(f"   Tx Hash: {tx_hash}")
-        # Add additional logic to process the event
+        new_fee = felt.to_hex(event.data[0])
+        print(f'new fee is' + new_fee)
         print()
 
     async def handle_invalidate(self, _info: Info, _cursor: Cursor):
