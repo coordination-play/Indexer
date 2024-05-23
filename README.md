@@ -23,7 +23,7 @@ Then install `poetry` and use it to install the package dependencies.
 
 Start MongoDB using the provided `docker-compose` file:
 
-    docker-compose up
+    docker compose up
 
 Notice that you can use any managed MongoDB like MongoDB Atlas.
 
